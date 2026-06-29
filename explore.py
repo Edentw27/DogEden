@@ -18,8 +18,9 @@ dog = XGO('xgomini')
 dog.reset()
 time.sleep(1)
 
-print("Robot action explorer. Type an id 1-255, or 'q' to quit.")
-print("Suggested ids to try: 1 2 3 4 6 11 12 17 19 21 24")
+print("Robot action explorer. Type an id 1-20, or 'q' to quit.")
+print("Documented ids: 1 get-down  2 stand  4 circle  6 squat  10 3axis-rot")
+print("                12 sit  13 wave  14 stretch  16 swing  19 handshake  20 greet")
 
 while True:
     s = input("action id> ").strip()
