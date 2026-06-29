@@ -55,12 +55,13 @@ ACTIONS = {
 # preset table. CONFIRM each one on your robot with scripts/explore.py,
 # then correct the numbers here.
 ACTION_IDS = {
-    "LIE DOWN":      1,    # 趴下
-    "STAND TALL":    2,    # 站起
-    "SIT DOWN":      6,    # 蹲起 (closest preset to "sit")
-    "WAVE ARM":      17,   # 招手 / wave
-    "ATTACK + BARK": 21,   # 俯卧撑 / lunge-like (plus a bark sound, below)
-    "SPIN / DANCE":  24,   # 跳舞 / dance
+    "LIE DOWN":      1,    # 1 = get down            (confirmed in docs)
+    "STAND TALL":    2,    # 2 = stand up            (confirmed in docs)
+    "SIT DOWN":      12,   # 12 = sit down           (was 6 = squat — WRONG)
+    "WAVE ARM":      13,   # 13 = wave               (was 17 = seeking food — WRONG)
+    "ATTACK + BARK": 16,   # 16 = swing L/R — no real "attack" preset; CONFIRM on robot,
+                           #      or replace with a scripted lunge (see note in chat)
+    "SPIN / DANCE":  4,    # 4 = circle (clean spin); try 10 = 3-axis rotation for "dance"
 }
 
 # Each colour maps to a fixed shape — EXCEPT blue, which needs geometry.
@@ -71,15 +72,19 @@ COLOR_SHAPE = {
     "purple": "cube",
     "blue":   None,     # decide ball vs cube from aspect ratio
 }
-# Minimum circularity to accept a blob (kills background noise). Green is
-# stricter because the desk/wall tends to mimic it.
-MIN_CIRC = {"green": 0.55, "red": 0.30, "yellow": 0.30, "purple": 0.30, "blue": 0.30}
+# Minimum circularity to accept a blob (kills background noise). Lowered for
+# distant objects: far away = small contour = noisier circularity, so a high
+# bar throws the real object away. Green stays a touch stricter (desk/wall).
+MIN_CIRC = {"green": 0.45, "red": 0.25, "yellow": 0.25, "purple": 0.25, "blue": 0.25}
 BLUE_BALL_CIRC = 0.77       # blue: circularity at/above this = ball, below = cube
 
 VALID_COLORS = ["red", "green", "blue", "yellow", "purple"]
 VALID_SHAPES = ["ball", "cube"]
 VALID_OBJECTS = set(ACTIONS.keys())
-MIN_AREA = 7000
+# Scan area: from SCAN_TOP down to the bottom, full width — so an object on the
+# table (off-centre or far) is still inside the search region.
+SCAN_TOP = 0.20
+MIN_AREA = 1500             # was 7000 — that was huge and killed far objects
 MAX_AREA = 250000
 
 # Path to a bark sound for the red ball (optional). Put a wav next to this file.
@@ -97,14 +102,14 @@ def get_mask(hsv, ranges):
 
 def detect_once(frame):
     h, w = frame.shape[:2]
-    roi_frame = frame[int(h * 0.20):int(h * 0.80), int(w * 0.30):int(w * 0.70)]
+    roi_frame = frame[int(h * SCAN_TOP):h, 0:w]   # full width, table area
     hsv = cv2.cvtColor(roi_frame, cv2.COLOR_BGR2HSV)
     results = []
 
     for color_name, ranges in COLOR_RANGES.items():
         mask = get_mask(hsv, ranges)
-        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN,  np.ones((5, 5),   np.uint8))
-        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((15, 15), np.uint8))
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN,  np.ones((3, 3),  np.uint8))
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((9, 9),  np.uint8))
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         for cnt in contours:
