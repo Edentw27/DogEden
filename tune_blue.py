@@ -25,8 +25,8 @@ import cv2
 import numpy as np
 import time
 
-BLUE_LOW  = np.array([100, 50, 50])
-BLUE_HIGH = np.array([130, 255, 255])
+BLUE_LOW  = np.array([38, 50, 45])
+BLUE_HIGH = np.array([132, 255, 255])
 MIN_AREA = 5000
 
 cap = cv2.VideoCapture(0)
