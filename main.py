@@ -80,9 +80,14 @@ CENTER_BAND = 0.20    # how centred the object must be before walking forward
 TURN_SPEED  = 35      # turn speed deg/s while aiming at the object
 TURN_SEARCH = 30      # turn speed deg/s while searching (object not in view)
 FWD_STEP    = 12      # forward step size (x translation, max 25)
-CLOSE_AREA  = 30000   # stop when the object's area reaches this (= close enough)
+CLOSE_AREA  = 20000   # stop when the object's area reaches this (= close enough)
                       #   stops too far away?  -> RAISE this
                       #   walks into the object? -> LOWER this
+# The camera is low, so up close the object leaves the top of the frame. Once
+# the object is centered and reaches COMMIT_AREA, the dog takes COMMIT_STEPS
+# final steps blind (without needing to see it) and then arrives.
+COMMIT_AREA  = 9000   # "getting close" size that triggers the blind final approach
+COMMIT_STEPS = 4      # how many forward steps to take blind before arriving
 WALK_TIMEOUT = 45     # give up walking after this many seconds
 
 # ── Shape decision ────────────────────────────────────────────────────
@@ -248,6 +253,19 @@ def walk_to_object(target, timeout=WALK_TIMEOUT):
             # Simulation (no robot): can't physically walk, so just confirm.
             if not ROBOT:
                 print(f"  (sim) sees {target} at cx={cx:+.2f}, area={area:.0f}")
+                return True
+
+            # Object centered and getting close, but the camera is low — up
+            # close the object rises out of the frame. So once it's centered and
+            # past the "commit" size, take a few final steps blind and arrive.
+            if area >= COMMIT_AREA and abs(cx) <= CENTER_BAND:
+                print("  Close and centered — committing final approach.")
+                if ROBOT:
+                    for _ in range(COMMIT_STEPS):
+                        dog.move('x', FWD_STEP)
+                        time.sleep(0.4)
+                    dog.stop()
+                print("  Arrived at the object.")
                 return True
 
             if area >= CLOSE_AREA and abs(cx) <= CENTER_BAND:
